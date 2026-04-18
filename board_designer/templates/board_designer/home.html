@@ -1,0 +1,1627 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hardware Design Test Board Generator</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Three.js for 3D viewer -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <style>
+        :root {
+            --viewer-border: #dee2e6;
+            --section-border: #e5e7eb;
+            --card-bg: #ffffff;
+            --input-bg: #ffffff;
+            --input-border: #d1d5db;
+        }
+
+        [data-bs-theme="dark"] {
+            --viewer-border: #3e4450;
+            --section-border: #374151;
+            --bs-body-bg: #0f172a;
+            --bs-body-color: #e2e8f0;
+            --card-bg: #1e293b;
+            --input-bg: #1e293b;
+            --input-border: #475569;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--bs-body-bg) 0%, #1a202c 100%);
+            min-height: 100vh;
+            color: var(--bs-body-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        [data-bs-theme="light"] body {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+
+        .container {
+            max-width: 1200px;
+        }
+
+        h1 {
+            font-weight: 700;
+            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        [data-bs-theme="dark"] h1 {
+            background: linear-gradient(135deg, #60a5fa 0%, #818cf8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        #viewer-container {
+            width: 100%;
+            height: 500px;
+            border: 2px solid var(--viewer-border);
+            border-radius: 1rem;
+            margin-top: 20px;
+            display: none;
+            background: var(--bs-body-bg);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .form-section {
+            margin-bottom: 24px;
+            padding: 24px;
+            border: 1px solid var(--section-border);
+            border-radius: 1rem;
+            background: var(--card-bg);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .form-section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .form-section h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--section-border);
+            color: var(--bs-body-color);
+        }
+
+        .form-section h4 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #60a5fa;
+        }
+
+        .mode-tabs {
+            margin-bottom: 24px;
+            border-bottom: 2px solid var(--section-border);
+        }
+
+        .mode-tabs .nav-link {
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .mode-tabs .nav-link.active {
+            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+            color: white !important;
+            border-color: transparent;
+        }
+
+        .loading-spinner {
+            display: none;
+            padding: 40px;
+            background: var(--card-bg);
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+
+        .alert-container {
+            margin-top: 20px;
+        }
+
+        .alert {
+            border-radius: 0.75rem;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .download-buttons {
+            display: none;
+            margin-top: 24px;
+            padding: 24px;
+            background: var(--card-bg);
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .download-buttons h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .theme-toggle i {
+            font-size: 1.2rem;
+        }
+
+        .form-control, .form-select {
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
+            color: var(--bs-body-color);
+            border-radius: 0.5rem;
+            padding: 0.625rem 0.875rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .form-control:focus, .form-select:focus {
+            background: var(--input-bg);
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 0.2rem rgba(96, 165, 250, 0.25);
+            color: var(--bs-body-color);
+        }
+
+        .form-label {
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: var(--bs-body-color);
+        }
+
+        .btn {
+            border-radius: 0.5rem;
+            font-weight: 500;
+            padding: 0.625rem 1.25rem;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+            border: none;
+            box-shadow: 0 4px 6px rgba(96, 165, 250, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            box-shadow: 0 6px 12px rgba(96, 165, 250, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+            border: none;
+            box-shadow: 0 4px 6px rgba(52, 211, 153, 0.3);
+        }
+
+        .btn-success:hover {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            box-shadow: 0 6px 12px rgba(52, 211, 153, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+            border: none;
+            box-shadow: 0 4px 6px rgba(56, 189, 248, 0.3);
+        }
+
+        .btn-info:hover {
+            background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+            box-shadow: 0 6px 12px rgba(56, 189, 248, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .btn-outline-primary {
+            color: #60a5fa;
+            border-color: #60a5fa;
+        }
+
+        .btn-outline-primary:hover {
+            background: #60a5fa;
+            border-color: #60a5fa;
+            color: white;
+        }
+
+        .btn-outline-secondary {
+            border-color: var(--section-border);
+        }
+
+        .btn-sm {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.875rem;
+        }
+
+        .btn-group {
+            gap: 12px;
+        }
+
+        .btn-group .btn {
+            margin: 0;
+        }
+
+        /* Floating scroll-to-viewer button */
+        #scroll-to-viewer-btn {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            z-index: 1000;
+            border-radius: 50px;
+            padding: 0.5rem 1.1rem;
+            font-size: 0.85rem;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        #scroll-to-viewer-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+        }
+
+        /* Accordion matches form-section style */
+        .accordion { margin-bottom: 0; }
+        .accordion-item {
+            margin-bottom: 24px;
+            border: 1px solid var(--section-border) !important;
+            border-radius: 1rem !important;
+            background: var(--card-bg);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .accordion-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+        }
+        .accordion-button {
+            background: var(--card-bg) !important;
+            color: var(--bs-body-color) !important;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-bottom: 2px solid var(--section-border);
+            padding: 18px 24px;
+        }
+        .accordion-button:not(.collapsed) {
+            background: var(--card-bg) !important;
+            color: var(--bs-body-color) !important;
+            box-shadow: none !important;
+        }
+        .accordion-button.collapsed { border-bottom-color: transparent; }
+        .accordion-button i.section-icon { margin-right: 10px; color: #60a5fa; font-size: 1.1rem; }
+        .accordion-body { background: var(--card-bg); padding: 20px 24px 24px; }
+        [data-bs-theme="dark"] .accordion-button::after { filter: invert(0.7); }
+
+        /* Active preset button */
+        .btn-preset.active-preset {
+            background: #3b82f6 !important;
+            color: white !important;
+            border-color: #3b82f6 !important;
+        }
+
+        /* Inline field validation */
+        .form-control.is-invalid { border-color: #ef4444 !important; box-shadow: 0 0 0 0.2rem rgba(239,68,68,0.2) !important; }
+        .invalid-feedback { display: block; color: #ef4444; font-size: 0.8rem; margin-top: 4px; }
+
+        @media (max-width: 768px) {
+            .theme-toggle { top: 10px; right: 10px; width: 40px; height: 40px; }
+            h1 { font-size: 1.75rem; }
+            .form-section { padding: 16px; }
+            .accordion-body { padding: 16px; }
+            #scroll-to-viewer-btn { bottom: 70px; right: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Theme Toggle Button -->
+    <button class="btn btn-outline-secondary theme-toggle" onclick="toggleTheme()" id="theme-toggle">
+        <i class="bi bi-moon-fill" id="theme-icon"></i>
+    </button>
+
+    <div class="container py-5">
+        <h1 class="text-center mb-4">Hardware Design Test Board Generator</h1>
+        <p class="text-center text-muted mb-5">
+            Generate parametric 3D-printable hardware test boards for M2-M12 bolts
+        </p>
+
+        <!-- Mode Selection Tabs -->
+        <ul class="nav nav-tabs mode-tabs" id="modeTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="standard-tab" data-bs-toggle="tab"
+                        data-bs-target="#standard-mode" type="button" role="tab">
+                    <i class="bi bi-grid-3x3-gap me-2"></i>Design Board
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="test-pieces-tab" data-bs-toggle="tab"
+                        data-bs-target="#test-pieces-mode" type="button" role="tab">
+                    <i class="bi bi-check2-square me-2"></i>Calibration Test Pieces
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="modeTabsContent">
+            <!-- Standard Mode -->
+            <div class="tab-pane fade show active" id="standard-mode" role="tabpanel">
+                <form id="standard-form" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="mode" value="standard">
+
+                    <!-- Preset Buttons -->
+                    <div class="alert alert-secondary" role="alert">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <strong><i class="bi bi-lightning-fill me-1"></i>Load Preset:</strong>
+                            <button type="button" class="btn btn-sm btn-outline-danger ms-auto" onclick="clearInputs()">
+                                <i class="bi bi-x-circle me-1"></i>Clear Inputs
+                            </button>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 mt-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary btn-preset" onclick="loadPreset('M2')">M2</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary btn-preset" onclick="loadPreset('M3')">M3</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary btn-preset" onclick="loadPreset('M4')">M4</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary btn-preset" onclick="loadPreset('M5')">M5</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary btn-preset" onclick="loadPreset('M6')">M6</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary btn-preset" onclick="loadPreset('M8')">M8</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary btn-preset" onclick="loadPreset('M10')">M10</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary btn-preset" onclick="loadPreset('M12')">M12</button>
+                        </div>
+                    </div>
+                    <!-- Disclaimer -->
+                    <div class="alert alert-warning" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <strong>Heads up:</strong> Preset values are reasonable starting points based on standard hardware dimensions, but every 3D printer and hardware brand is different. Always measure your actual hardware with calipers and adjust the values before printing a full board. The test piece generator (below) is a good way to dial in your tolerances first.
+                    </div>
+
+                    <div class="form-section">
+                        <h3>Board Configuration</h3>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                {{ standard_form.bolt_size.label_tag }}
+                                {{ standard_form.bolt_size }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                {{ standard_form.bolt_head_type.label_tag }}
+                                {{ standard_form.bolt_head_type }}
+                            </div>
+                            <div class="col-md-4 mb-3" id="custom-bolt-head-container" style="display:none;">
+                                {{ standard_form.custom_bolt_head_type.label_tag }}
+                                {{ standard_form.custom_bolt_head_type }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion" id="boardAccordion">
+
+                    <!-- Bolt Parameters -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-bolt">
+                                <i class="bi bi-arrow-down-circle section-icon"></i>Bolt Parameters
+                            </button>
+                        </h2>
+                        <div id="collapse-bolt" class="accordion-collapse collapse show">
+                            <div class="accordion-body">
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        {{ standard_form.bolt_slip_fit.label_tag }}
+                                        {{ standard_form.bolt_slip_fit }}
+                                        <small class="form-text text-muted">Clearance hole diameter for the bolt shaft to pass through freely.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Hex Nut Parameters -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-hex">
+                                <i class="bi bi-hexagon section-icon"></i>Hex Nut Parameters
+                            </button>
+                        </h2>
+                        <div id="collapse-hex" class="accordion-collapse collapse show">
+                            <div class="accordion-body">
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        {{ standard_form.press_fit_hex.label_tag }}
+                                        {{ standard_form.press_fit_hex }}
+                                        <small class="form-text text-muted">Hex pocket sized to grip the nut — nut is held in place without glue.</small>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        {{ standard_form.slip_fit_hex.label_tag }}
+                                        {{ standard_form.slip_fit_hex }}
+                                        <small class="form-text text-muted">Hex pocket the nut can slide into and out of easily.</small>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        {{ standard_form.hex_depth.label_tag }}
+                                        {{ standard_form.hex_depth }}
+                                        <small class="form-text text-muted">Depth of the hex nut pocket (usually equal to nut thickness).</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Counter Bore Parameters -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-cb">
+                                <i class="bi bi-circle section-icon"></i>Counter Bore Parameters
+                            </button>
+                        </h2>
+                        <div id="collapse-cb" class="accordion-collapse collapse show">
+                            <div class="accordion-body">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        {{ standard_form.counter_bore_diameter.label_tag }}
+                                        {{ standard_form.counter_bore_diameter }}
+                                        <small class="form-text text-muted">Flat-bottomed pocket diameter to recess a socket head cap screw flush with the surface.</small>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        {{ standard_form.counter_bore_depth.label_tag }}
+                                        {{ standard_form.counter_bore_depth }}
+                                        <small class="form-text text-muted">Depth of the counter bore pocket (usually equal to screw head height).</small>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        {{ standard_form.counter_bore_washer_diameter.label_tag }}
+                                        {{ standard_form.counter_bore_washer_diameter }}
+                                        <small class="form-text text-muted">Larger counter bore diameter that also fits a washer under the screw head.</small>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        {{ standard_form.counter_bore_washer_depth.label_tag }}
+                                        {{ standard_form.counter_bore_washer_depth }}
+                                        <small class="form-text text-muted">Depth of the counter bore + washer pocket.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Counter Sunk Parameters -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-cs">
+                                <i class="bi bi-triangle section-icon"></i>Counter Sunk Parameters
+                            </button>
+                        </h2>
+                        <div id="collapse-cs" class="accordion-collapse collapse show">
+                            <div class="accordion-body">
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        {{ standard_form.counter_sunk_diameter.label_tag }}
+                                        {{ standard_form.counter_sunk_diameter }}
+                                        <small class="form-text text-muted">Widest diameter of the countersink cone at the board surface.</small>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        {{ standard_form.counter_sunk_chamfer_depth.label_tag }}
+                                        {{ standard_form.counter_sunk_chamfer_depth }}
+                                        <small class="form-text text-muted">How deep the countersink cone goes into the board.</small>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        {{ standard_form.counter_sunk_chamfer.label_tag }}
+                                        {{ standard_form.counter_sunk_chamfer }}
+                                        <small class="form-text text-muted">Size of the chamfer bevel that forms the cone angle.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Square Nut Parameters -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-sq">
+                                <i class="bi bi-square section-icon"></i>Square Nut Parameters
+                            </button>
+                        </h2>
+                        <div id="collapse-sq" class="accordion-collapse collapse show">
+                            <div class="accordion-body">
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        {{ standard_form.square_press_fit.label_tag }}
+                                        {{ standard_form.square_press_fit }}
+                                        <small class="form-text text-muted">Square pocket sized to grip the nut — nut is held in place without glue.</small>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        {{ standard_form.square_slip_fit.label_tag }}
+                                        {{ standard_form.square_slip_fit }}
+                                        <small class="form-text text-muted">Square pocket the nut can slide into and out of easily.</small>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        {{ standard_form.square_depth.label_tag }}
+                                        {{ standard_form.square_depth }}
+                                        <small class="form-text text-muted">Depth of the square nut pocket (usually equal to nut thickness).</small>
+                                    </div>
+                                </div>
+                                <h4 class="mt-3">Vertical Square Nut Slot</h4>
+                                <p class="text-muted" style="font-size:0.9em;">A slot entering from the board edge so the nut can be inserted sideways. A bolt hole passes through the slot center for fit testing.</p>
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        {{ standard_form.square_slip_fit_vertical_width.label_tag }}
+                                        {{ standard_form.square_slip_fit_vertical_width }}
+                                        <small class="form-text text-muted">Nut thickness — sets how wide the slot opening is.</small>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        {{ standard_form.square_slip_fit_vertical_length.label_tag }}
+                                        {{ standard_form.square_slip_fit_vertical_length }}
+                                        <small class="form-text text-muted">Nut side length along the board edge direction.</small>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        {{ standard_form.square_slip_fit_vertical_depth.label_tag }}
+                                        {{ standard_form.square_slip_fit_vertical_depth }}
+                                        <small class="form-text text-muted">How far the slot goes into the board from the edge (equal to nut side length).</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Heat Insert Parameters -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-heat">
+                                <i class="bi bi-thermometer-half section-icon"></i>Heat Insert Parameters
+                            </button>
+                        </h2>
+                        <div id="collapse-heat" class="accordion-collapse collapse show">
+                            <div class="accordion-body">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        {{ standard_form.heat_insert_diameter.label_tag }}
+                                        {{ standard_form.heat_insert_diameter }}
+                                        <small class="form-text text-muted">Diameter of the cylindrical pocket for a threaded heat-set insert.</small>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        {{ standard_form.heat_insert_depth.label_tag }}
+                                        {{ standard_form.heat_insert_depth }}
+                                        {% if standard_form.heat_insert_depth.help_text %}
+                                            <small class="form-text text-muted">{{ standard_form.heat_insert_depth.help_text }}</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Export Options -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-export">
+                                <i class="bi bi-download section-icon"></i>Export Options
+                            </button>
+                        </h2>
+                        <div id="collapse-export" class="accordion-collapse collapse show">
+                            <div class="accordion-body">
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        {{ standard_form.export_mode.label_tag }}
+                                        {{ standard_form.export_mode }}
+                                        {% if standard_form.export_mode.help_text %}
+                                            <small class="form-text text-muted">{{ standard_form.export_mode.help_text }}</small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        {{ standard_form.text_height.label_tag }}
+                                        {{ standard_form.text_height }}
+                                        <small class="form-text text-muted">Default 0.4mm — works well on most 3D printers as a single extrusion layer.</small>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        {{ standard_form.line_width.label_tag }}
+                                        {{ standard_form.line_width }}
+                                        <small class="form-text text-muted">Default 0.8mm — matches a standard 0.4mm nozzle printing two lines side by side.</small>
+                                    </div>
+                                </div>
+                                <div class="row mt-1">
+                                    <div class="col-12">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="unlock-print-settings">
+                                            <label class="form-check-label" for="unlock-print-settings">
+                                                Override text/line defaults
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    </div><!-- end accordion -->
+
+                    <button type="button" id="generate-btn" class="btn btn-primary btn-lg" onclick="generateBoard()">
+                        <i class="bi bi-cpu me-2"></i>Generate Board
+                    </button>
+                </form>
+            </div>
+
+            <!-- Test Pieces Mode -->
+            <div class="tab-pane fade" id="test-pieces-mode" role="tabpanel">
+                <div class="alert alert-info">
+                    <strong>Test Pieces:</strong> Generate small test pieces to verify hole sizes before printing the full board.
+                    Each piece generates 5 holes in 0.1mm increments (base size to base+0.4mm).
+                </div>
+
+                <form id="test-piece-form" method="post">
+                    {% csrf_token %}
+
+                    <div class="form-section">
+                        <h3>Test Piece Configuration</h3>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ test_piece_form.piece_type.label_tag }}
+                                {{ test_piece_form.piece_type }}
+                            </div>
+                        </div>
+
+                        <!-- Bolt Slip Fit Note (shown only for bolt_slip_fit type) -->
+                        <div class="row bolt-slip-fit-note" style="display:none;">
+                            <div class="col-md-12 mb-3">
+                                <div class="alert alert-info">
+                                    <strong>Note:</strong> The bolt slip fit diameter you select here should be used as the "Bolt Slip Fit" input for all other test piece types.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Common Fields -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3 bolt-slip-fit-field">
+                                {{ test_piece_form.bolt_slip_fit.label_tag }}
+                                {{ test_piece_form.bolt_slip_fit }}
+                                <small class="form-text text-muted">The bolt shaft clearance hole drilled through every test piece so you can test bolt fit alongside the nut/pocket.</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="base_size" id="base-size-label">Base Size (mm)</label>
+                                {{ test_piece_form.base_size }}
+                                <small class="form-text text-muted" id="base-size-help">Will generate 5 holes: this size, +0.1, +0.2, +0.3, +0.4mm</small>
+                            </div>
+                        </div>
+
+                        <!-- Hex Nut Fields -->
+                        <div class="row hex-nut-fields" style="display:none;">
+                            <div class="col-md-12 mb-3">
+                                <div class="alert alert-secondary">
+                                    <strong>Note:</strong> This test piece works for both press fit and slip fit hex nuts.
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ test_piece_form.hex_depth.label_tag }}
+                                {{ test_piece_form.hex_depth }}
+                                <small class="form-text text-muted">Depth of the hex pocket — should match your nut's thickness.</small>
+                            </div>
+                        </div>
+
+                        <!-- Square Nut Fields -->
+                        <div class="row square-nut-fields" style="display:none;">
+                            <div class="col-md-12 mb-3">
+                                <div class="alert alert-secondary">
+                                    <strong>Note:</strong> This test piece works for both press fit and slip fit square nuts.
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ test_piece_form.square_depth.label_tag }}
+                                {{ test_piece_form.square_depth }}
+                                <small class="form-text text-muted">Depth of the square pocket — should match your nut's thickness.</small>
+                            </div>
+                        </div>
+
+                        <!-- Counter Bore Fields -->
+                        <div class="row counter-bore-fields" style="display:none;">
+                            <div class="col-md-6 mb-3">
+                                {{ test_piece_form.counter_bore_depth.label_tag }}
+                                {{ test_piece_form.counter_bore_depth }}
+                                <small class="form-text text-muted">Depth of the counter bore pocket — should match the screw head height.</small>
+                            </div>
+                        </div>
+
+                        <!-- Counter Bore + Washer Fields -->
+                        <div class="row counter-bore-washer-fields" style="display:none;">
+                            <div class="col-md-6 mb-3">
+                                {{ test_piece_form.counter_bore_washer_depth.label_tag }}
+                                {{ test_piece_form.counter_bore_washer_depth }}
+                                <small class="form-text text-muted">Depth of the counter bore + washer pocket — should fit both the screw head and washer.</small>
+                            </div>
+                        </div>
+
+                        <!-- Counter Sunk Fields -->
+                        <div class="row counter-sunk-fields" style="display:none;">
+                            <div class="col-md-6 mb-3">
+                                {{ test_piece_form.counter_sunk_chamfer_depth.label_tag }}
+                                {{ test_piece_form.counter_sunk_chamfer_depth }}
+                                <small class="form-text text-muted">How deep the countersink cone goes into the piece.</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ test_piece_form.counter_sunk_chamfer.label_tag }}
+                                {{ test_piece_form.counter_sunk_chamfer }}
+                                <small class="form-text text-muted">Size of the chamfer bevel forming the cone angle.</small>
+                            </div>
+                        </div>
+
+                        <!-- Heat Insert Fields -->
+                        <div class="row heat-insert-fields" style="display:none;">
+                            <div class="col-md-6 mb-3">
+                                {{ test_piece_form.heat_insert_depth.label_tag }}
+                                {{ test_piece_form.heat_insert_depth }}
+                                <small class="form-text text-muted">Depth of the heat insert pocket — should match the insert's length.</small>
+                            </div>
+                        </div>
+
+                        <!-- Vertical Square Fields -->
+                        <div class="row vertical-square-fields" style="display:none;">
+                            <div class="col-md-6 mb-3">
+                                {{ test_piece_form.square_slip_fit_vertical_width.label_tag }}
+                                {{ test_piece_form.square_slip_fit_vertical_width }}
+                                <small class="form-text text-muted">Nut thickness — sets how wide the slot opening is.</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ test_piece_form.square_slip_fit_vertical_depth.label_tag }}
+                                {{ test_piece_form.square_slip_fit_vertical_depth }}
+                                <small class="form-text text-muted">How far the slot goes into the piece from the edge.</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn btn-primary btn-lg" onclick="generateTestPiece()">
+                        Generate Test Piece
+                    </button>
+                </form>
+
+                <!-- Test Piece Viewer -->
+                <div id="test-piece-viewer-container" class="mt-4" style="display:none;">
+                    <h3>Test Piece Preview</h3>
+                    <div id="test-piece-viewer" style="width:100%; height:400px; border:1px solid #ddd; border-radius:8px;"></div>
+                </div>
+
+                <!-- Test Piece Download Button -->
+                <div id="test-piece-download-container" class="mt-3" style="display:none;">
+                    <a id="download-test-piece" href="#" class="btn btn-success btn-lg" download>
+                        Download Test Piece STL
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div class="loading-spinner text-center my-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Generating...</span>
+            </div>
+            <p class="mt-2">Generating your hardware board...</p>
+        </div>
+
+        <!-- Alerts Container -->
+        <div class="alert-container"></div>
+
+        <!-- Download Buttons -->
+        <div class="download-buttons">
+            <h3>Download Your Board</h3>
+            <div class="btn-group" role="group">
+                <a id="download-base" href="#" class="btn btn-success btn-lg" download>
+                    Download Base Board STL
+                </a>
+                <a id="download-graphics" href="#" class="btn btn-info btn-lg" download style="display:none;">
+                    Download Labels/Graphics STL
+                </a>
+            </div>
+        </div>
+
+        <!-- 3D Viewer -->
+        <div id="viewer-container"></div>
+    </div>
+
+    <!-- Floating scroll-to-viewer button -->
+    <button id="scroll-to-viewer-btn" class="btn btn-primary" onclick="scrollToViewer()">
+        <i class="bi bi-eye me-1"></i>View 3D
+    </button>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // Make THREE available globally for other functions
+        window.THREE = THREE;
+        window.STLLoader = STLLoader;
+        window.OrbitControls = OrbitControls;
+    </script>
+
+    <script>
+        // Lock/unlock text height and line width fields
+        document.addEventListener('DOMContentLoaded', function() {
+            const textHeightField = document.querySelector('#id_text_height');
+            const lineWidthField = document.querySelector('#id_line_width');
+            const unlockCheckbox = document.querySelector('#unlock-print-settings');
+
+            function setFieldLock(locked) {
+                [textHeightField, lineWidthField].forEach(f => {
+                    if (f) {
+                        f.readOnly = locked;
+                        f.style.opacity = locked ? '0.6' : '1';
+                        f.style.cursor = locked ? 'not-allowed' : '';
+                    }
+                });
+            }
+
+            setFieldLock(true); // locked by default
+            if (unlockCheckbox) {
+                unlockCheckbox.addEventListener('change', function() {
+                    setFieldLock(!this.checked);
+                });
+            }
+        });
+
+        // Show/hide custom bolt head type input
+        document.addEventListener('DOMContentLoaded', function() {
+            // Standard mode
+            const boltHeadSelect = document.querySelector('#id_bolt_head_type');
+            if (boltHeadSelect) {
+                boltHeadSelect.addEventListener('change', function() {
+                    const customContainer = document.querySelector('#custom-bolt-head-container');
+                    if (this.value === 'custom') {
+                        customContainer.style.display = 'block';
+                    } else {
+                        customContainer.style.display = 'none';
+                    }
+                });
+            }
+
+            // Auto-load preset when bolt size dropdown changes
+            const boltSizeSelect = document.querySelector('#id_bolt_size');
+            if (boltSizeSelect) {
+                boltSizeSelect.addEventListener('change', function() {
+                    if (this.value && this.value !== '---------') {
+                        loadPreset(this.value);
+                    }
+                });
+            }
+
+            // Test piece type selector
+            const pieceTypeSelect = document.querySelector('#piece_type');
+            if (pieceTypeSelect) {
+                pieceTypeSelect.addEventListener('change', function() {
+                    updateTestPieceFields(this.value);
+                });
+                // Initialize on page load
+                updateTestPieceFields(pieceTypeSelect.value);
+            }
+        });
+
+        function updateTestPieceFields(pieceType) {
+            // Hide all optional field groups
+            document.querySelectorAll('.hex-nut-fields, .square-nut-fields, .counter-bore-fields, .counter-bore-washer-fields, .counter-sunk-fields, .heat-insert-fields, .vertical-square-fields').forEach(el => {
+                el.style.display = 'none';
+            });
+
+            // Update base size label and help text based on piece type
+            const baseSizeLabel = document.getElementById('base-size-label');
+            const baseSizeHelp = document.getElementById('base-size-help');
+
+            const labels = {
+                'bolt_slip_fit': {
+                    label: 'Bolt Slip Fit Diameter (mm)',
+                    help: 'Will generate 5 holes: this size, +0.1, +0.2, +0.3, +0.4mm. This is the bolt through-hole diameter.'
+                },
+                'hex_nut': {
+                    label: 'Hex Nut Diameter (mm) - Side to Side',
+                    help: 'Will generate 5 holes: this size, +0.1, +0.2, +0.3, +0.4mm. Measure across flats (side to side), NOT corner to corner.'
+                },
+                'square_nut': {
+                    label: 'Square Nut Size (mm) - Side Length',
+                    help: 'Will generate 5 holes: this size, +0.1, +0.2, +0.3, +0.4mm. This is the side length of the square nut.'
+                },
+                'counter_bore': {
+                    label: 'Counter Bore Diameter (mm)',
+                    help: 'Will generate 5 holes: this size, +0.1, +0.2, +0.3, +0.4mm. This is the counter bore diameter.'
+                },
+                'counter_bore_washer': {
+                    label: 'Counter Bore + Washer Diameter (mm)',
+                    help: 'Will generate 5 holes: this size, +0.1, +0.2, +0.3, +0.4mm. This is the counter bore + washer diameter.'
+                },
+                'counter_sunk': {
+                    label: 'Counter Sunk Diameter (mm)',
+                    help: 'Will generate 5 holes: this size, +0.1, +0.2, +0.3, +0.4mm. This is the counter sunk head diameter.'
+                },
+                'heat_insert': {
+                    label: 'Heat Insert Diameter (mm)',
+                    help: 'Will generate 5 holes: this size, +0.1, +0.2, +0.3, +0.4mm. This is the heat insert outer diameter.'
+                },
+                'vertical_square': {
+                    label: 'Vertical Square Slot Length (mm)',
+                    help: 'Will generate 5 holes: this size, +0.1, +0.2, +0.3, +0.4mm. This is the vertical dimension of the slot.'
+                }
+            };
+
+            if (labels[pieceType]) {
+                baseSizeLabel.textContent = labels[pieceType].label;
+                baseSizeHelp.textContent = labels[pieceType].help;
+            }
+
+            // Handle bolt slip fit field and note visibility
+            const boltSlipFitField = document.querySelector('.bolt-slip-fit-field');
+            const boltSlipFitNote = document.querySelector('.bolt-slip-fit-note');
+
+            if (pieceType === 'bolt_slip_fit') {
+                // Hide bolt slip fit field, show note
+                boltSlipFitField.style.display = 'none';
+                boltSlipFitNote.style.display = 'flex';
+            } else {
+                // Show bolt slip fit field, hide note
+                boltSlipFitField.style.display = 'block';
+                boltSlipFitNote.style.display = 'none';
+            }
+
+            // Show relevant fields based on piece type
+            if (pieceType === 'hex_nut') {
+                document.querySelector('.hex-nut-fields').style.display = 'flex';
+            } else if (pieceType === 'square_nut') {
+                document.querySelector('.square-nut-fields').style.display = 'flex';
+            } else if (pieceType === 'counter_bore') {
+                document.querySelector('.counter-bore-fields').style.display = 'flex';
+            } else if (pieceType === 'counter_bore_washer') {
+                document.querySelector('.counter-bore-washer-fields').style.display = 'flex';
+            } else if (pieceType === 'counter_sunk') {
+                document.querySelector('.counter-sunk-fields').style.display = 'flex';
+            } else if (pieceType === 'heat_insert') {
+                document.querySelector('.heat-insert-fields').style.display = 'flex';
+            } else if (pieceType === 'vertical_square') {
+                document.querySelector('.vertical-square-fields').style.display = 'flex';
+            }
+        }
+
+        function generateBoard() {
+            const form = document.getElementById('standard-form');
+            const formData = new FormData(form);
+            const btn = document.getElementById('generate-btn');
+
+            // Clear previous errors/state
+            clearFieldErrors();
+            document.querySelector('.alert-container').innerHTML = '';
+            document.querySelector('.download-buttons').style.display = 'none';
+            document.querySelector('#viewer-container').style.display = 'none';
+
+            // Disable button and show spinner
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Generating...';
+            document.querySelector('.loading-spinner').style.display = 'block';
+
+            fetch('/generate/', {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-CSRFToken': formData.get('csrfmiddlewaretoken') }
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.querySelector('.loading-spinner').style.display = 'none';
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-cpu me-2"></i>Generate Board';
+
+                if (data.success) {
+                    showAlert('success', 'Board generated successfully!');
+                    if (data.warnings && data.warnings.length > 0) {
+                        data.warnings.forEach(w => showAlert('warning', w));
+                    }
+
+                    const baseDownload = document.getElementById('download-base');
+                    baseDownload.href = '/media/' + data.base_file;
+
+                    const graphicsDownload = document.getElementById('download-graphics');
+                    if (data.graphics_file) {
+                        graphicsDownload.href = '/media/' + data.graphics_file;
+                        graphicsDownload.style.display = 'inline-block';
+                    } else {
+                        graphicsDownload.style.display = 'none';
+                    }
+
+                    document.querySelector('.download-buttons').style.display = 'block';
+
+                    const graphicsUrl = data.graphics_file ? '/media/' + data.graphics_file : null;
+                    load3DViewer('/media/' + data.base_file, graphicsUrl);
+
+                    // Auto-scroll to viewer and show floating button
+                    setTimeout(() => {
+                        scrollToViewer();
+                        document.getElementById('scroll-to-viewer-btn').style.display = 'block';
+                    }, 300);
+
+                } else {
+                    if (data.errors) {
+                        if (typeof data.errors === 'object' && !Array.isArray(data.errors)) {
+                            showFieldErrors(data.errors);
+                            // Also show non-field errors
+                            if (data.errors.__all__) {
+                                data.errors.__all__.forEach(e => showAlert('danger', e));
+                            } else {
+                                showAlert('danger', 'Please fix the errors highlighted below.');
+                            }
+                        } else if (Array.isArray(data.errors)) {
+                            data.errors.forEach(e => showAlert('danger', e));
+                        } else {
+                            showAlert('danger', JSON.stringify(data.errors));
+                        }
+                    }
+                }
+            })
+            .catch(error => {
+                document.querySelector('.loading-spinner').style.display = 'none';
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-cpu me-2"></i>Generate Board';
+                showAlert('danger', 'Error generating board: ' + error.message);
+            });
+        }
+
+        function showAlert(type, message) {
+            const alertContainer = document.querySelector('.alert-container');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type} alert-dismissible fade show`;
+            alert.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            alertContainer.appendChild(alert);
+        }
+
+        function generateTestPiece() {
+            // Get form data
+            const form = document.getElementById('test-piece-form');
+            const formData = new FormData(form);
+
+            // Hide previous results
+            document.querySelector('#test-piece-viewer-container').style.display = 'none';
+            document.querySelector('#test-piece-download-container').style.display = 'none';
+            document.querySelector('.alert-container').innerHTML = '';
+
+            // Show loading
+            document.querySelector('.loading-spinner').style.display = 'block';
+
+            // Submit via AJAX
+            fetch('/generate-test-piece/', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.querySelector('.loading-spinner').style.display = 'none';
+
+                if (data.success) {
+                    // Show download button
+                    const downloadButton = document.querySelector('#download-test-piece');
+                    downloadButton.href = `/media/${data.file}`;
+                    downloadButton.download = data.file;
+                    document.querySelector('#test-piece-download-container').style.display = 'block';
+
+                    // Load and display STL in viewer
+                    loadTestPieceSTL(`/media/${data.file}`);
+
+                    showAlert('success', 'Test piece generated successfully!');
+                } else {
+                    if (typeof data.errors === 'object') {
+                        let errorMsg = 'Errors:<br>';
+                        for (let field in data.errors) {
+                            errorMsg += `${field}: ${data.errors[field]}<br>`;
+                        }
+                        showAlert('danger', errorMsg);
+                    } else if (Array.isArray(data.errors)) {
+                        showAlert('danger', data.errors.join('<br>'));
+                    } else {
+                        showAlert('danger', JSON.stringify(data.errors));
+                    }
+                }
+            })
+            .catch(error => {
+                document.querySelector('.loading-spinner').style.display = 'none';
+                showAlert('danger', 'Error generating test piece: ' + error.message);
+            });
+        }
+
+        function loadTestPieceSTL(url) {
+            const container = document.getElementById('test-piece-viewer');
+            document.getElementById('test-piece-viewer-container').style.display = 'block';
+
+            // Clear previous viewer
+            container.innerHTML = '';
+
+            // Create scene
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf0f0f0);
+
+            // Create camera
+            const camera = new THREE.PerspectiveCamera(
+                75,
+                container.clientWidth / container.clientHeight,
+                0.1,
+                1000
+            );
+            camera.position.set(50, 50, 50);
+
+            // Create renderer
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            container.appendChild(renderer.domElement);
+
+            // Add lights
+            const ambientLight = new THREE.AmbientLight(0x404040);
+            scene.add(ambientLight);
+
+            const directionalLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight1.position.set(1, 1, 1);
+            scene.add(directionalLight1);
+
+            const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
+            directionalLight2.position.set(-1, -1, -1);
+            scene.add(directionalLight2);
+
+            // Add orbit controls
+            const controls = new window.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            // Load STL
+            const loader = new window.STLLoader();
+            loader.load(url, function(geometry) {
+                const material = new THREE.MeshPhongMaterial({
+                    color: 0x0066cc,
+                    specular: 0x111111,
+                    shininess: 200
+                });
+
+                const mesh = new THREE.Mesh(geometry, material);
+                scene.add(mesh);
+
+                // Center and fit to view
+                geometry.computeBoundingBox();
+                const center = new THREE.Vector3();
+                geometry.boundingBox.getCenter(center);
+                mesh.position.sub(center);
+
+                const size = new THREE.Vector3();
+                geometry.boundingBox.getSize(size);
+                const maxDim = Math.max(size.x, size.y, size.z);
+                camera.position.set(maxDim, maxDim, maxDim);
+                controls.update();
+
+                // Animation loop
+                function animate() {
+                    requestAnimationFrame(animate);
+                    controls.update();
+                    renderer.render(scene, camera);
+                }
+                animate();
+            });
+
+            // Handle window resize
+            window.addEventListener('resize', function() {
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            });
+        }
+
+        function loadPreset(boltType) {
+            const presets = {
+                'M2': {
+                    bolt_size: 'M2',
+                    bolt_slip_fit: 2.3,
+                    press_fit_hex: 3.9,
+                    slip_fit_hex: 4.2,
+                    hex_depth: 1.8,
+                    counter_bore_diameter: 4.2,
+                    counter_bore_depth: 2.2,
+                    counter_bore_washer_diameter: 5.5,
+                    counter_bore_washer_depth: 2.6,
+                    counter_sunk_diameter: 4.3,
+                    counter_sunk_chamfer_depth: 1.2,
+                    counter_sunk_chamfer: 1.0,
+                    square_press_fit: 3.9,
+                    square_slip_fit: 4.2,
+                    square_depth: 1.5,
+                    square_slip_fit_vertical_width: 1.5,
+                    square_slip_fit_vertical_length: 4.3,
+                    square_slip_fit_vertical_depth: 4.3,
+                    heat_insert_diameter: 3.2
+                },
+                'M3': {
+                    bolt_size: 'M3',
+                    bolt_slip_fit: 3.3,
+                    press_fit_hex: 5.4,
+                    slip_fit_hex: 5.7,
+                    hex_depth: 6.6,
+                    counter_bore_diameter: 5.7,
+                    counter_bore_depth: 8.2,
+                    counter_bore_washer_diameter: 7.4,
+                    counter_bore_washer_depth: 9.9,
+                    counter_sunk_diameter: 6.4,
+                    counter_sunk_chamfer_depth: 2.2,
+                    counter_sunk_chamfer: 1.5,
+                    square_press_fit: 5.4,
+                    square_slip_fit: 5.8,
+                    square_depth: 2.1,
+                    square_slip_fit_vertical_width: 2.1,
+                    square_slip_fit_vertical_length: 6.1,
+                    square_slip_fit_vertical_depth: 6.1,
+                    heat_insert_diameter: 4.5
+                },
+                'M4': {
+                    bolt_size: 'M4',
+                    bolt_slip_fit: 4.3,
+                    press_fit_hex: 6.9,
+                    slip_fit_hex: 7.3,
+                    hex_depth: 3.3,
+                    counter_bore_diameter: 7.2,
+                    counter_bore_depth: 4.1,
+                    counter_bore_washer_diameter: 9.2,
+                    counter_bore_washer_depth: 5.1,
+                    counter_sunk_diameter: 8.3,
+                    counter_sunk_chamfer_depth: 2.4,
+                    counter_sunk_chamfer: 2.0,
+                    square_press_fit: 6.8,
+                    square_slip_fit: 7.3,
+                    square_depth: 2.5,
+                    square_slip_fit_vertical_width: 2.5,
+                    square_slip_fit_vertical_length: 7.6,
+                    square_slip_fit_vertical_depth: 7.6,
+                    heat_insert_diameter: 5.6
+                },
+                'M5': {
+                    bolt_size: 'M5',
+                    bolt_slip_fit: 5.3,
+                    press_fit_hex: 7.9,
+                    slip_fit_hex: 8.3,
+                    hex_depth: 4.2,
+                    counter_bore_diameter: 9.0,
+                    counter_bore_depth: 5.2,
+                    counter_bore_washer_diameter: 10.5,
+                    counter_bore_washer_depth: 6.3,
+                    counter_sunk_diameter: 10.3,
+                    counter_sunk_chamfer_depth: 3.2,
+                    counter_sunk_chamfer: 2.5,
+                    square_press_fit: 7.9,
+                    square_slip_fit: 8.4,
+                    square_depth: 3.0,
+                    square_slip_fit_vertical_width: 3.0,
+                    square_slip_fit_vertical_length: 8.7,
+                    square_slip_fit_vertical_depth: 8.7,
+                    heat_insert_diameter: 6.8
+                },
+                'M6': {
+                    bolt_size: 'M6',
+                    bolt_slip_fit: 6.3,
+                    press_fit_hex: 9.9,
+                    slip_fit_hex: 10.4,
+                    hex_depth: 5.2,
+                    counter_bore_diameter: 10.5,
+                    counter_bore_depth: 6.3,
+                    counter_bore_washer_diameter: 12.4,
+                    counter_bore_washer_depth: 8.0,
+                    counter_sunk_diameter: 12.4,
+                    counter_sunk_chamfer_depth: 3.6,
+                    counter_sunk_chamfer: 3.0,
+                    square_press_fit: 9.9,
+                    square_slip_fit: 10.5,
+                    square_depth: 3.6,
+                    square_slip_fit_vertical_width: 3.6,
+                    square_slip_fit_vertical_length: 10.9,
+                    square_slip_fit_vertical_depth: 10.9,
+                    heat_insert_diameter: 8.1
+                },
+                'M8': {
+                    bolt_size: 'M8',
+                    bolt_slip_fit: 8.3,
+                    press_fit_hex: 12.8,
+                    slip_fit_hex: 13.3,
+                    hex_depth: 6.6,
+                    counter_bore_diameter: 12.3,
+                    counter_bore_depth: 8.2,
+                    counter_bore_washer_diameter: 16.3,
+                    counter_bore_washer_depth: 9.9,
+                    counter_sunk_diameter: 16.3,
+                    counter_sunk_chamfer_depth: 5.0,
+                    counter_sunk_chamfer: 4.0,
+                    square_press_fit: 12.9,
+                    square_slip_fit: 13.5,
+                    square_depth: 4.5,
+                    square_slip_fit_vertical_width: 4.5,
+                    square_slip_fit_vertical_length: 13.9,
+                    square_slip_fit_vertical_depth: 13.9,
+                    heat_insert_diameter: 10.1
+                },
+                'M10': {
+                    bolt_size: 'M10',
+                    bolt_slip_fit: 10.3,
+                    press_fit_hex: 16.9,
+                    slip_fit_hex: 17.3,
+                    hex_depth: 8.2,
+                    counter_bore_diameter: 16.4,
+                    counter_bore_depth: 10.0,
+                    counter_bore_washer_diameter: 20.3,
+                    counter_bore_washer_depth: 12.1,
+                    counter_sunk_diameter: 20.3,
+                    counter_sunk_chamfer_depth: 5.7,
+                    counter_sunk_chamfer: 5.0,
+                    square_press_fit: 17.1,
+                    square_slip_fit: 17.4,
+                    square_depth: 5.4,
+                    square_slip_fit_vertical_width: 5.4,
+                    square_slip_fit_vertical_length: 17.8,
+                    square_slip_fit_vertical_depth: 17.8,
+                    heat_insert_diameter: 13.3
+                },
+                'M12': {
+                    bolt_size: 'M12',
+                    bolt_slip_fit: 12.3,
+                    press_fit_hex: 17.9,
+                    slip_fit_hex: 18.4,
+                    hex_depth: 11.0,
+                    counter_bore_diameter: 21.1,
+                    counter_bore_depth: 12.4,
+                    counter_bore_washer_diameter: 27.5,
+                    counter_bore_washer_depth: 15.0,
+                    counter_sunk_diameter: 24.4,
+                    counter_sunk_chamfer_depth: 7.0,
+                    counter_sunk_chamfer: 6.0,
+                    square_press_fit: 18.9,
+                    square_slip_fit: 19.4,
+                    square_depth: 6.7,
+                    square_slip_fit_vertical_width: 6.7,
+                    square_slip_fit_vertical_length: 19.6,
+                    square_slip_fit_vertical_depth: 19.6,
+                    heat_insert_diameter: 16.5
+                }
+            };
+
+            const preset = presets[boltType];
+            if (!preset) return;
+
+            // Populate form fields
+            Object.keys(preset).forEach(key => {
+                const field = document.querySelector(`#id_${key}`);
+                if (field) {
+                    field.value = preset[key];
+                }
+            });
+
+            // Sync bolt size dropdown
+            const boltSizeField = document.querySelector('#id_bolt_size');
+            if (boltSizeField) boltSizeField.value = boltType;
+
+            // Highlight active preset button
+            document.querySelectorAll('.btn-preset').forEach(btn => btn.classList.remove('active-preset'));
+            const activeBtn = [...document.querySelectorAll('.btn-preset')].find(b => b.textContent.trim() === boltType);
+            if (activeBtn) activeBtn.classList.add('active-preset');
+
+            showAlert('info', `Loaded ${boltType} preset values`);
+        }
+
+        function clearInputs() {
+            const skipIds = ['id_text_height', 'id_line_width'];
+            document.querySelectorAll('#standard-form input[type="number"], #standard-form input[type="text"]').forEach(f => {
+                if (!skipIds.includes(f.id)) f.value = '';
+            });
+            document.querySelectorAll('.btn-preset').forEach(btn => btn.classList.remove('active-preset'));
+            const boltSizeField = document.querySelector('#id_bolt_size');
+            if (boltSizeField) boltSizeField.selectedIndex = 0;
+            clearFieldErrors();
+        }
+
+        function scrollToViewer() {
+            document.getElementById('viewer-container').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function clearFieldErrors() {
+            document.querySelectorAll('.form-control.is-invalid').forEach(f => f.classList.remove('is-invalid'));
+            document.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
+        }
+
+        function showFieldErrors(errors) {
+            if (typeof errors !== 'object' || Array.isArray(errors)) return;
+            Object.entries(errors).forEach(([fieldName, messages]) => {
+                const field = document.querySelector(`#id_${fieldName}`);
+                if (field) {
+                    field.classList.add('is-invalid');
+                    const feedback = document.createElement('div');
+                    feedback.className = 'invalid-feedback';
+                    feedback.textContent = Array.isArray(messages) ? messages.join(' ') : messages;
+                    field.parentNode.appendChild(feedback);
+                    // Open the accordion that contains this field
+                    const accordionCollapse = field.closest('.accordion-collapse');
+                    if (accordionCollapse && accordionCollapse.classList.contains('collapse') && !accordionCollapse.classList.contains('show')) {
+                        new bootstrap.Collapse(accordionCollapse, { toggle: false }).show();
+                    }
+                }
+            });
+        }
+
+        function load3DViewer(baseStlUrl, graphicsStlUrl = null) {
+            const container = document.getElementById('viewer-container');
+            container.style.display = 'block';
+            container.innerHTML = ''; // Clear previous
+
+            // Set up Three.js scene
+            window.scene = new window.THREE.Scene();
+            const currentTheme = document.documentElement.getAttribute('data-bs-theme');
+            window.scene.background = new window.THREE.Color(currentTheme === 'dark' ? 0x0f172a : 0xf8f9fa);
+
+            const camera = new window.THREE.PerspectiveCamera(
+                75,
+                container.clientWidth / container.clientHeight,
+                0.1,
+                1000
+            );
+
+            const renderer = new window.THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            container.appendChild(renderer.domElement);
+
+            // Add lights
+            const ambientLight = new window.THREE.AmbientLight(0x606060);
+            scene.add(ambientLight);
+
+            const directionalLight = new window.THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(1, 1, 1);
+            scene.add(directionalLight);
+
+            const loader = new window.STLLoader();
+            let loadedCount = 0;
+            let totalToLoad = graphicsStlUrl ? 2 : 1;
+            let allGeometries = [];
+
+            // Load base board STL
+            loader.load(baseStlUrl, function(geometry) {
+                const material = new window.THREE.MeshPhongMaterial({
+                    color: 0x0088ff,  // Blue for board
+                    specular: 0x111111,
+                    shininess: 200
+                });
+
+                const mesh = new window.THREE.Mesh(geometry, material);
+                allGeometries.push(geometry);
+                scene.add(mesh);
+
+                loadedCount++;
+                if (loadedCount === totalToLoad) {
+                    centerAndPositionCamera();
+                }
+            });
+
+            // Load graphics STL if available
+            if (graphicsStlUrl) {
+                loader.load(graphicsStlUrl, function(geometry) {
+                    const material = new window.THREE.MeshPhongMaterial({
+                        color: 0xffffff,  // White for graphics/text
+                        specular: 0x111111,
+                        shininess: 200
+                    });
+
+                    const mesh = new window.THREE.Mesh(geometry, material);
+                    allGeometries.push(geometry);
+                    scene.add(mesh);
+
+                    loadedCount++;
+                    if (loadedCount === totalToLoad) {
+                        centerAndPositionCamera();
+                    }
+                });
+            }
+
+            function centerAndPositionCamera() {
+                // Calculate combined bounding box
+                const combinedBox = new window.THREE.Box3();
+                allGeometries.forEach(geo => {
+                    geo.computeBoundingBox();
+                    combinedBox.union(geo.boundingBox);
+                });
+
+                const center = combinedBox.getCenter(new window.THREE.Vector3());
+
+                // Center all meshes
+                scene.children.forEach(child => {
+                    if (child.isMesh) {
+                        child.position.sub(center);
+                    }
+                });
+
+                // Position camera
+                const size = combinedBox.getSize(new window.THREE.Vector3());
+                const maxDim = Math.max(size.x, size.y, size.z);
+                camera.position.z = maxDim * 2;
+
+                // Add orbit controls
+                const controls = new window.OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+
+                // Animation loop
+                function animate() {
+                    requestAnimationFrame(animate);
+                    controls.update();
+                    renderer.render(scene, camera);
+                }
+                animate();
+            }
+        }
+    </script>
+
+    <script>
+        // Theme Toggle Functionality
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-bs-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            const icon = document.getElementById('theme-icon');
+
+            html.setAttribute('data-bs-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+
+            // Update icon
+            if (newTheme === 'dark') {
+                icon.className = 'bi bi-moon-fill';
+            } else {
+                icon.className = 'bi bi-sun-fill';
+            }
+
+            // Update 3D viewer background if it exists
+            if (window.scene) {
+                window.scene.background = new THREE.Color(newTheme === 'dark' ? 0x0f172a : 0xf8f9fa);
+            }
+        }
+
+        // Load saved theme on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            const html = document.documentElement;
+            const icon = document.getElementById('theme-icon');
+
+            html.setAttribute('data-bs-theme', savedTheme);
+
+            if (savedTheme === 'light') {
+                icon.className = 'bi bi-sun-fill';
+            }
+        });
+    </script>
+</body>
+</html>
