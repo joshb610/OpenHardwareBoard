@@ -33,7 +33,7 @@ Before printing the full board, use the **Calibration Test Pieces** tab to gener
 ## Installation
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/openhardwareboard.git
+git clone https://github.com/joshb610/openhardwareboard.git
 cd openhardwareboard
 
 python -m venv venv
